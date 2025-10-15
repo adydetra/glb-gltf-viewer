@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import GLBViewer from './components/GLBViewer'
 import './assets/styles/App.css'
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
+import * as THREE from 'three'
 
 function App() {
   const [modelUrl, setModelUrl] = useState(null)
@@ -37,12 +40,6 @@ function App() {
     setFileName('')
   }
 
-  const handleDragEnter = (event) => {
-    event.preventDefault()
-    event.stopPropagation()
-    setIsDragging(true)
-  }
-
   const handleDragOver = (event) => {
     event.preventDefault()
     event.stopPropagation()
@@ -54,12 +51,9 @@ function App() {
     event.preventDefault()
     event.stopPropagation()
 
-    const nextTarget = event.relatedTarget
-    if (nextTarget && event.currentTarget.contains(nextTarget)) {
-      return
+    if (!event.currentTarget.contains(event.relatedTarget)) {
+      setIsDragging(false)
     }
-
-    setIsDragging(false)
   }
 
   const handleDrop = (event) => {
@@ -71,10 +65,51 @@ function App() {
     processFile(file)
   }
 
+  const handleExport = async (config) => {
+    if (!modelUrl) return
+
+    try {
+      const loader = new GLTFLoader()
+      
+      loader.load(modelUrl, (gltf) => {
+        const scene = gltf.scene.clone()
+        
+        scene.traverse((child) => {
+          if (child.isMesh) {
+            child.material = child.material.clone()
+            child.material.color = new THREE.Color(config.color)
+          }
+        })
+        
+        scene.scale.set(config.scale, config.scale, config.scale)
+
+        const exporter = new GLTFExporter()
+        
+        exporter.parse(
+          scene,
+          (result) => {
+            const blob = new Blob([result], { type: 'application/octet-stream' })
+            const url = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = url
+            link.download = `${fileName.replace(/\.(glb|gltf)$/i, '')}_modified.glb`
+            link.click()
+            URL.revokeObjectURL(url)
+          },
+          (error) => {
+            console.error('Export error:', error)
+          },
+          { binary: true }
+        )
+      })
+    } catch (error) {
+      console.error('Export failed:', error)
+    }
+  }
+
   return (
     <div
-      className={`app-container ${isDragging ? 'dragging' : ''}`}
-      onDragEnter={handleDragEnter}
+      className="app-container"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -88,7 +123,7 @@ function App() {
         <h1>GLB/GLTF Viewer</h1>
         <div className="controls">
           <label htmlFor="file-upload" className="upload-btn">
-            {fileName || 'Pilih File'}
+            {fileName || 'Choose File'}
           </label>
           <input
             id="file-upload"
@@ -106,14 +141,17 @@ function App() {
       </header>
 
       {modelUrl ? (
-        <GLBViewer modelUrl={modelUrl} />
+        <GLBViewer modelUrl={modelUrl} onExport={handleExport} />
       ) : (
-        <div className={`placeholder ${isDragging ? 'drag-active' : ''}`}>
-          <p>
-            Drop file GLB atau GLTF di sini
-            <br />atau klik tombol di atas
-          </p>
-        </div>
+        <label htmlFor="file-upload" className={`placeholder ${isDragging ? 'drag-active' : ''}`}>
+          <svg className="upload-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <p>Drop GLB or GLTF file here</p>
+          <span>or click the button above</span>
+        </label>
       )}
     </div>
   )
