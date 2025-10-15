@@ -112,14 +112,14 @@ function GLBViewer({ modelUrl, onExport }) {
           
           {showGrid && (
             <Grid
-              args={[20, 20]}
-              cellSize={0.5}
+              args={[50, 50]}
+              cellSize={1}
               cellThickness={0.5}
               cellColor="#6b7280"
-              sectionSize={2}
+              sectionSize={5}
               sectionThickness={1}
               sectionColor="#9ca3af"
-              fadeDistance={25}
+              fadeDistance={100}
               fadeStrength={1}
               followCamera={false}
               infiniteGrid={true}
@@ -140,8 +140,8 @@ function GLBViewer({ modelUrl, onExport }) {
           <OrbitControls
             enableZoom
             enablePan
-            minDistance={isMobile ? 2 : 1.5}
-            maxDistance={isMobile ? 28 : 22}
+            minDistance={isMobile ? 2 : 1}
+            maxDistance={isMobile ? 100 : 80}
             makeDefault
           />
           <GizmoHelper alignment="top-right" margin={[80, 80]}>
