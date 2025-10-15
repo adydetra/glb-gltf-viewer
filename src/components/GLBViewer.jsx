@@ -65,6 +65,13 @@ function GLBViewer({ modelUrl, onExport }) {
   const [showGrid, setShowGrid] = useState(true)
   const [showTransform, setShowTransform] = useState(true)
   const [position, setPosition] = useState({ x: 0, y: 0, z: 0 })
+  
+  // Lighting controls
+  const [ambientIntensity, setAmbientIntensity] = useState(0.5)
+  const [directionalIntensity, setDirectionalIntensity] = useState(1)
+  const [bgColor, setBgColor] = useState('#1a1a1a')
+  
+  const canvasRef = useRef()
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 640
   const cameraDistance = isMobile ? 10 : 7
@@ -77,17 +84,31 @@ function GLBViewer({ modelUrl, onExport }) {
   const handlePositionChange = (newPosition) => {
     setPosition({ x: newPosition.x, y: newPosition.y, z: newPosition.z })
   }
+  
+  const handleScreenshot = () => {
+    if (canvasRef.current) {
+      const canvas = canvasRef.current.querySelector('canvas')
+      if (canvas) {
+        const dataUrl = canvas.toDataURL('image/png')
+        const link = document.createElement('a')
+        link.href = dataUrl
+        link.download = `glb-screenshot-${Date.now()}.png`
+        link.click()
+      }
+    }
+  }
 
   return (
-    <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
+    <div ref={canvasRef} style={{ width: '100%', height: '100vh', position: 'relative' }}>
       <Canvas
         camera={{ position: [0, 0, cameraDistance], fov: cameraFov }}
-        style={{ background: '#1a1a1a' }}
+        style={{ background: bgColor }}
+        gl={{ preserveDrawingBuffer: true }}
       >
         <Suspense fallback={null}>
-          <ambientLight intensity={0.5} />
-          <directionalLight position={[10, 10, 5]} intensity={1} />
-          <directionalLight position={[-10, -10, -5]} intensity={0.3} />
+          <ambientLight intensity={ambientIntensity} />
+          <directionalLight position={[10, 10, 5]} intensity={directionalIntensity} />
+          <directionalLight position={[-10, -10, -5]} intensity={directionalIntensity * 0.3} />
           
           {showGrid && (
             <Grid
@@ -129,16 +150,29 @@ function GLBViewer({ modelUrl, onExport }) {
         </Suspense>
       </Canvas>
 
-      <button 
-        className="controls-toggle"
-        onClick={() => setShowControls(!showControls)}
-        title="Toggle Controls"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M12 1v6m0 6v6m-9-9h6m6 0h6"/>
-        </svg>
-      </button>
+      <div className="floating-controls">
+        <button 
+          className="screenshot-btn"
+          onClick={handleScreenshot}
+          title="Take Screenshot"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+        </button>
+        
+        <button 
+          className="controls-toggle"
+          onClick={() => setShowControls(!showControls)}
+          title="Toggle Controls"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 1v6m0 6v6m-9-9h6m6 0h6"/>
+          </svg>
+        </button>
+      </div>
 
       {showControls && (
         <div className="config-panel">
@@ -217,12 +251,79 @@ function GLBViewer({ modelUrl, onExport }) {
             </label>
           </div>
 
+          <div className="config-divider"></div>
+
+          <div className="config-group">
+            <label>
+              <span>Ambient Light</span>
+              <div className="scale-controls">
+                <input
+                  type="range"
+                  min="0"
+                  max="2"
+                  step="0.1"
+                  value={ambientIntensity}
+                  onChange={(e) => setAmbientIntensity(parseFloat(e.target.value))}
+                  className="scale-slider"
+                />
+                <span className="scale-value">{ambientIntensity.toFixed(1)}</span>
+              </div>
+            </label>
+          </div>
+
+          <div className="config-group">
+            <label>
+              <span>Directional Light</span>
+              <div className="scale-controls">
+                <input
+                  type="range"
+                  min="0"
+                  max="3"
+                  step="0.1"
+                  value={directionalIntensity}
+                  onChange={(e) => setDirectionalIntensity(parseFloat(e.target.value))}
+                  className="scale-slider"
+                />
+                <span className="scale-value">{directionalIntensity.toFixed(1)}</span>
+              </div>
+            </label>
+          </div>
+
+          <div className="config-group">
+            <label>
+              <span>Background Color</span>
+              <div className="color-input-wrapper">
+                <div className="color-preview">
+                  <div className="color-preview-inner" style={{ backgroundColor: bgColor }}></div>
+                  <input
+                    type="color"
+                    value={bgColor}
+                    onChange={(e) => setBgColor(e.target.value)}
+                    className="color-input"
+                  />
+                </div>
+                <div className="color-info">
+                  <span className="color-value">{bgColor}</span>
+                  <span className="color-label">BACKGROUND</span>
+                </div>
+              </div>
+            </label>
+          </div>
+
           <div className="config-actions">
             <button 
               className="preset-btn"
-              onClick={() => { setColor('#ffffff'); setScale(1); }}
+              onClick={() => { 
+                setColor('#ffffff');
+                setScale(1);
+                setShowGrid(true);
+                setShowTransform(true);
+                setAmbientIntensity(0.5);
+                setDirectionalIntensity(1);
+                setBgColor('#1a1a1a');
+              }}
             >
-              Reset
+              Reset Configuration
             </button>
             <button 
               className="export-btn"
