@@ -100,7 +100,7 @@ function Model({ url, color, scale, showTransform, onPositionChange, fileMap }) 
   )
 }
 
-function GLBViewer({ modelUrl, onExport, fileMap }) {
+function Viewer({ modelUrl, onExport, fileMap }) {
   const [color, setColor] = useState('#ffffff')
   const [scale, setScale] = useState(1)
   const [showControls, setShowControls] = useState(false)
@@ -379,4 +379,4 @@ function GLBViewer({ modelUrl, onExport, fileMap }) {
   )
 }
 
-export default GLBViewer
+export default Viewer

@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import GLBViewer from './components/GLBViewer';
+import Viewer from './components/Viewer';
 import './assets/styles/App.css';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
@@ -360,7 +360,7 @@ function App() {
       </header>
 
       {modelUrl ? (
-        <GLBViewer modelUrl={modelUrl} fileMap={fileMap} onExport={handleExport} />
+        <Viewer modelUrl={modelUrl} fileMap={fileMap} onExport={handleExport} />
       ) : (
         <div className={`placeholder ${isDragging ? 'drag-active' : ''}`} onClick={() => document.getElementById('glb-upload')?.click()} title="Klik untuk pilih .glb atau gunakan tombol upload">
           <svg className="upload-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
