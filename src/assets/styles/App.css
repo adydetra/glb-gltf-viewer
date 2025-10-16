@@ -143,7 +143,10 @@
   background: rgba(15, 15, 20, 0.8);
   backdrop-filter: blur(16px);
   z-index: 20;
-  pointer-events: auto; /* <--- menangkap drop */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: scale(0.98);
 }
 
 .drop-overlay p {
