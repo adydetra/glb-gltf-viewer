@@ -22,6 +22,12 @@ function App() {
   const controlsRef = useRef(null);
   const placeholderRef = useRef(null);
 
+  // Tahun dinamis mengikuti waktu Asia/Jakarta
+  const jakartaYear = (() => {
+    const jakartaNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+    return jakartaNow.getFullYear();
+  })();
+
   // === Fade-in: title + container tombol (bersamaan) ===
   useLayoutEffect(() => {
     const targets = [titleRef.current, controlsRef.current].filter(Boolean);
@@ -40,7 +46,6 @@ function App() {
   // === Fade-in: UI drag area / placeholder box ===
   useLayoutEffect(() => {
     if (!modelUrl && placeholderRef.current) {
-      // mulai dari 0 biar tidak sempat nongol sebelum animasi
       gsap.set(placeholderRef.current, { opacity: 0 });
       gsap.to(placeholderRef.current, {
         opacity: 1,
@@ -67,7 +72,7 @@ function App() {
 
     const filesArr = Array.from(files);
 
-    // 1) Kalau via tombol GLB, cari .glb duluan
+    // 1) Via tombol GLB, cari .glb duluan
     if (forceGLB) {
       const glbFile = filesArr.find((f) => f.name.toLowerCase().endsWith('.glb'));
       if (glbFile) {
@@ -78,7 +83,7 @@ function App() {
       }
     }
 
-    // 2) Kalau ada .gltf -> treat sebagai GLTF folder
+    // 2) Jika ada .gltf → perlakukan sebagai GLTF folder
     const rootGLTF = filesArr.find((f) => f.name.toLowerCase().endsWith('.gltf'));
     if (rootGLTF) {
       const map = new Map();
@@ -108,7 +113,7 @@ function App() {
       return;
     }
 
-    // 3) Kalau tidak ada .gltf, cek .glb (DnD single GLB)
+    // 3) Jika tidak ada .gltf, cek .glb (DnD single GLB)
     const glbFallback = filesArr.find((f) => f.name.toLowerCase().endsWith('.glb'));
     if (glbFallback) {
       const url = URL.createObjectURL(glbFallback);
@@ -433,6 +438,15 @@ function App() {
           </svg>
           <p>Drop .glb / folder GLTF / .zip here</p>
           <span>or use the buttons above</span>
+
+          <div style={{ marginTop: '16px', color: 'rgba(255,255,255,0.55)' }}>
+            <span style={{ fontSize: '12px' }}>
+              Copyright &copy; {jakartaYear} —{' '}
+              <a href="https://github.com/adydetra" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
+                adydetra
+              </a>
+            </span>
+          </div>
         </div>
       )}
     </div>
