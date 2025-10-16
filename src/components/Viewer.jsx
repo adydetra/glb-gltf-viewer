@@ -99,7 +99,7 @@ function Model({ url, color, scale, showTransform, onPositionChange, fileMap }) 
   );
 }
 
-function Viewer({ modelUrl, onExport, fileMap }) {
+function Viewer({ modelUrl, fileMap }) {
   const [color, setColor] = useState('#ffffff');
   const [scale, setScale] = useState(1);
   const [showControls, setShowControls] = useState(false);
@@ -122,8 +122,6 @@ function Viewer({ modelUrl, onExport, fileMap }) {
       // optional: console.log('FileMap size:', fileMap.size)
     }
   }, [fileMap]);
-
-  const handleExportClick = () => onExport?.({ color, scale });
 
   const handlePositionChange = (newPosition) => {
     setPosition({ x: newPosition.x, y: newPosition.y, z: newPosition.z });
@@ -224,7 +222,7 @@ function Viewer({ modelUrl, onExport, fileMap }) {
                 <input
                   type="range"
                   min="0.1"
-                  max="30"
+                  max="30" // tetap 30 sesuai perubahanmu
                   step="0.1"
                   value={scale}
                   onChange={(e) => setScale(parseFloat(e.target.value))}
@@ -305,9 +303,6 @@ function Viewer({ modelUrl, onExport, fileMap }) {
               }}
             >
               Reset Configuration
-            </button>
-            <button className="preset-btn" onClick={handleExportClick} title="Export modified GLB">
-              Export GLB
             </button>
           </div>
         </div>

@@ -2,9 +2,6 @@
 import { useState, useRef, useLayoutEffect, useEffect } from 'react';
 import Viewer from './components/Viewer';
 import './assets/styles/App.css';
-import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-import * as THREE from 'three';
 import JSZip from 'jszip';
 import gsap from 'gsap';
 
@@ -310,74 +307,6 @@ function App() {
     });
   };
 
-  // ===== Export =====
-  const handleExport = async (config) => {
-    if (!modelUrl) return;
-    try {
-      const loader = new GLTFLoader();
-      if (fileMap) {
-        loader.manager.setURLModifier((url) => {
-          let normalized = url.replace(/^\.?\/?/, '');
-          if (fileMap.has(normalized)) return fileMap.get(normalized);
-          if (fileMap.has(normalized.toLowerCase())) return fileMap.get(normalized.toLowerCase());
-          if (fileMap.has('./' + normalized)) return fileMap.get('./' + normalized);
-          try {
-            const decoded = decodeURIComponent(normalized);
-            if (fileMap.has(decoded)) return fileMap.get(decoded);
-            if (fileMap.has(decoded.toLowerCase())) return fileMap.get(decoded.toLowerCase());
-          } catch {}
-          const basename = normalized.split('/').pop();
-          if (fileMap.has(basename)) return fileMap.get(basename);
-          if (fileMap.has(basename.toLowerCase())) return fileMap.get(basename.toLowerCase());
-          for (const [key, value] of fileMap.entries()) {
-            if (
-              key.endsWith('/' + normalized) ||
-              key.toLowerCase().endsWith('/' + normalized.toLowerCase()) ||
-              key.endsWith('/' + basename) ||
-              key.toLowerCase().endsWith('/' + basename.toLowerCase())
-            )
-              return value;
-          }
-          return url;
-        });
-      }
-
-      loader.load(
-        modelUrl,
-        (gltf) => {
-          const scene = gltf.scene.clone();
-          scene.traverse((child) => {
-            if (child.isMesh) {
-              child.material = child.material.clone();
-              child.material.color = new THREE.Color(config.color);
-            }
-          });
-          scene.scale.set(config.scale, config.scale, config.scale);
-
-          const exporter = new GLTFExporter();
-          exporter.parse(
-            scene,
-            (result) => {
-              const blob = new Blob([result], { type: 'application/octet-stream' });
-              const url = URL.createObjectURL(blob);
-              const link = document.createElement('a');
-              link.href = url;
-              link.download = `${fileName.replace(/\.(glb|gltf)$/i, '')}_modified.glb`;
-              link.click();
-              URL.revokeObjectURL(url);
-            },
-            (error) => console.error('Export error:', error),
-            { binary: true }
-          );
-        },
-        undefined,
-        (error) => console.error('Load error:', error)
-      );
-    } catch (error) {
-      console.error('Export failed:', error);
-    }
-  };
-
   return (
     <div className="app-container" onDragEnter={handleDragEnter} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
       <header className="header">
@@ -422,7 +351,7 @@ function App() {
       </header>
 
       {modelUrl ? (
-        <Viewer modelUrl={modelUrl} fileMap={fileMap} onExport={handleExport} />
+        <Viewer modelUrl={modelUrl} fileMap={fileMap} />
       ) : (
         <div
           ref={placeholderRef}
@@ -439,8 +368,8 @@ function App() {
           <p>Drop .glb / folder GLTF / .zip here</p>
           <span>or use the buttons above</span>
 
-          <div style={{ marginTop: '16px', color: 'rgba(255,255,255,0.55)' }}>
-            <span style={{ fontSize: '12px' }}>
+          <div style={{ marginTop: '16px', fontSize: '11px', color: 'rgba(255,255,255,0.55)' }}>
+            <span>
               Copyright &copy; {jakartaYear} —{' '}
               <a href="https://github.com/adydetra" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
                 adydetra
