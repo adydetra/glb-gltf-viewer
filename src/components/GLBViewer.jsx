@@ -1,12 +1,52 @@
 import { Suspense, useRef, useState, useEffect } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, useGLTF, Environment, Center, TransformControls, Grid, GizmoHelper, GizmoViewport } from '@react-three/drei'
+import { Canvas, useFrame, useLoader } from '@react-three/fiber'
+import { OrbitControls, Environment, Center, TransformControls, Grid, GizmoHelper, GizmoViewport } from '@react-three/drei'
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
-function Model({ url, color, scale, showTransform, onPositionChange }) {
+function Model({ url, color, scale, showTransform, onPositionChange, fileMap }) {
   const meshRef = useRef()
   const transformRef = useRef()
-  const { scene } = useGLTF(url)
+
+  const gltf = useLoader(GLTFLoader, url, (loader) => {
+    if (fileMap) {
+      loader.manager.setURLModifier((assetUrl) => {
+        let normalized = assetUrl.replace(/^\.?\/?/, '')
+
+        if (fileMap.has(normalized)) return fileMap.get(normalized)
+        const lower = normalized.toLowerCase()
+        if (fileMap.has(lower)) return fileMap.get(lower)
+
+        const withPrefix = './' + normalized
+        if (fileMap.has(withPrefix)) return fileMap.get(withPrefix)
+
+        try {
+          const decoded = decodeURIComponent(normalized)
+          if (fileMap.has(decoded)) return fileMap.get(decoded)
+          if (fileMap.has(decoded.toLowerCase())) return fileMap.get(decoded.toLowerCase())
+        } catch (_) {}
+
+        const basename = normalized.split('/').pop()
+        if (fileMap.has(basename)) return fileMap.get(basename)
+        if (fileMap.has(basename.toLowerCase())) return fileMap.get(basename.toLowerCase())
+
+        for (const [key, value] of fileMap.entries()) {
+          if (
+            key.endsWith('/' + normalized) ||
+            key.toLowerCase().endsWith('/' + normalized.toLowerCase()) ||
+            key.endsWith('/' + basename) ||
+            key.toLowerCase().endsWith('/' + basename.toLowerCase())
+          ) {
+            return value
+          }
+        }
+        return assetUrl
+      })
+      loader.setResourcePath('')
+    }
+  })
+
+  const { scene } = gltf
   const [autoRotate, setAutoRotate] = useState(true)
 
   useEffect(() => {
@@ -15,6 +55,10 @@ function Model({ url, color, scale, showTransform, onPositionChange }) {
         if (child.isMesh) {
           child.material = child.material.clone()
           child.material.color = new THREE.Color(color)
+          if (child.material.aoMap && !child.geometry.attributes.uv2) {
+            child.material.aoMap = null
+            child.material.needsUpdate = true
+          }
         }
       })
     }
@@ -23,9 +67,7 @@ function Model({ url, color, scale, showTransform, onPositionChange }) {
   useEffect(() => {
     if (transformRef.current && showTransform) {
       const controls = transformRef.current
-      const handleDragging = (event) => {
-        setAutoRotate(!event.value)
-      }
+      const handleDragging = (event) => setAutoRotate(!event.value)
       const handleChange = () => {
         if (onPositionChange && meshRef.current) {
           onPositionChange(meshRef.current.position)
@@ -58,33 +100,37 @@ function Model({ url, color, scale, showTransform, onPositionChange }) {
   )
 }
 
-function GLBViewer({ modelUrl, onExport }) {
+function GLBViewer({ modelUrl, onExport, fileMap }) {
   const [color, setColor] = useState('#ffffff')
   const [scale, setScale] = useState(1)
   const [showControls, setShowControls] = useState(false)
   const [showGrid, setShowGrid] = useState(true)
   const [showTransform, setShowTransform] = useState(true)
   const [position, setPosition] = useState({ x: 0, y: 0, z: 0 })
-  
-  // Lighting controls
+
   const [ambientIntensity, setAmbientIntensity] = useState(0.5)
   const [directionalIntensity, setDirectionalIntensity] = useState(1)
   const [bgColor, setBgColor] = useState('#1a1a1a')
-  
+
   const canvasRef = useRef()
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 640
   const cameraDistance = isMobile ? 10 : 7
   const cameraFov = isMobile ? 58 : 55
 
-  const handleExport = () => {
-    onExport({ color, scale })
-  }
+  useEffect(() => {
+    if (fileMap) {
+      // optional log
+      // console.log('FileMap in viewer:', fileMap.size)
+    }
+  }, [fileMap])
+
+  const handleExport = () => onExport?.({ color, scale })
 
   const handlePositionChange = (newPosition) => {
     setPosition({ x: newPosition.x, y: newPosition.y, z: newPosition.z })
   }
-  
+
   const handleScreenshot = () => {
     if (canvasRef.current) {
       const canvas = canvasRef.current.querySelector('canvas')
@@ -109,7 +155,7 @@ function GLBViewer({ modelUrl, onExport }) {
           <ambientLight intensity={ambientIntensity} />
           <directionalLight position={[10, 10, 5]} intensity={directionalIntensity} />
           <directionalLight position={[-10, -10, -5]} intensity={directionalIntensity * 0.3} />
-          
+
           {showGrid && (
             <Grid
               args={[50, 50]}
@@ -122,20 +168,21 @@ function GLBViewer({ modelUrl, onExport }) {
               fadeDistance={100}
               fadeStrength={1}
               followCamera={false}
-              infiniteGrid={true}
+              infiniteGrid
             />
           )}
-          
+
           {modelUrl && (
-            <Model 
-              url={modelUrl} 
-              color={color} 
+            <Model
+              url={modelUrl}
+              color={color}
               scale={scale}
               showTransform={showTransform}
               onPositionChange={handlePositionChange}
+              fileMap={fileMap}
             />
           )}
-          
+
           <Environment preset="city" />
           <OrbitControls
             enableZoom
@@ -151,7 +198,7 @@ function GLBViewer({ modelUrl, onExport }) {
       </Canvas>
 
       <div className="floating-controls">
-        <button 
+        <button
           className="screenshot-btn"
           onClick={handleScreenshot}
           title="Take Screenshot"
@@ -161,8 +208,8 @@ function GLBViewer({ modelUrl, onExport }) {
             <circle cx="12" cy="13" r="4"/>
           </svg>
         </button>
-        
-        <button 
+
+        <button
           className="controls-toggle"
           onClick={() => setShowControls(!showControls)}
           title="Toggle Controls"
@@ -178,7 +225,7 @@ function GLBViewer({ modelUrl, onExport }) {
         <div className="config-panel">
           <div className="config-header">
             <h3>Configuration</h3>
-            <button 
+            <button
               className="close-btn"
               onClick={() => setShowControls(false)}
             >
@@ -311,30 +358,19 @@ function GLBViewer({ modelUrl, onExport }) {
           </div>
 
           <div className="config-actions">
-            <button 
+            <button
               className="preset-btn"
-              onClick={() => { 
-                setColor('#ffffff');
-                setScale(1);
-                setShowGrid(true);
-                setShowTransform(true);
-                setAmbientIntensity(0.5);
-                setDirectionalIntensity(1);
-                setBgColor('#1a1a1a');
+              onClick={() => {
+                setColor('#ffffff')
+                setScale(1)
+                setShowGrid(true)
+                setShowTransform(true)
+                setAmbientIntensity(0.5)
+                setDirectionalIntensity(1)
+                setBgColor('#1a1a1a')
               }}
             >
               Reset Configuration
-            </button>
-            <button 
-              className="export-btn"
-              onClick={handleExport}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-              Download GLB
             </button>
           </div>
         </div>
