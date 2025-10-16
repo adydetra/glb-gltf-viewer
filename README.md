@@ -36,6 +36,25 @@ bun dev
 > # pnpm install
 > ```
 
+---
+
+## Uploading Models
+
+### Supported File Types
+
+- Single `.glb` file (all-in-one 3D model)
+- Folder containing `.gltf` with assets (`.bin`, `.jpg`, `.png`)
+- Zipped (`.zip`) GLTF folder with all assets
+
+### How to Upload
+
+1. Drag and drop your file/folder/zip into the viewer
+2. Or click to open file picker and select your model
+3. Wait for the model to load
+4. Use mouse/touch to rotate, zoom, and pan
+
+---
+
 ## License
 
 This project is licensed under the [MIT](LICENSE) license.
