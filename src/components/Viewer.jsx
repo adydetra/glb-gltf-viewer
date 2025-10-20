@@ -105,6 +105,7 @@ function Viewer({ modelUrl, fileMap }) {
   const [showControls, setShowControls] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
   const [showTransform, setShowTransform] = useState(true);
+  const [showGizmo, setShowGizmo] = useState(true);
   const [position, setPosition] = useState({ x: 0, y: 0, z: 0 });
 
   const [ambientIntensity, setAmbientIntensity] = useState(0.5);
@@ -168,9 +169,11 @@ function Viewer({ modelUrl, fileMap }) {
 
           <Environment preset="city" />
           <OrbitControls enableZoom enablePan minDistance={isMobile ? 2 : 1} maxDistance={isMobile ? 100 : 80} makeDefault />
-          <GizmoHelper alignment="top-right" margin={[80, 80]}>
-            <GizmoViewport axisColors={['#ef4444', '#22c55e', '#3b82f6']} labelColor="white" />
-          </GizmoHelper>
+          {showGizmo && (
+            <GizmoHelper alignment="top-right" margin={[80, 80]}>
+              <GizmoViewport axisColors={['#ef4444', '#22c55e', '#3b82f6']} labelColor="white" />
+            </GizmoHelper>
+          )}
         </Suspense>
       </Canvas>
 
@@ -251,6 +254,15 @@ function Viewer({ modelUrl, fileMap }) {
             </label>
           </div>
 
+          <div className="config-group">
+            <label className="toggle-label">
+              <span>Gizmo</span>
+              <button className={`toggle-switch ${showGizmo ? 'active' : ''}`} onClick={() => setShowGizmo(!showGizmo)} aria-label="Toggle Gizmo">
+                <span className="toggle-slider"></span>
+              </button>
+            </label>
+          </div>
+
           <div className="config-divider"></div>
 
           <div className="config-group">
@@ -297,6 +309,7 @@ function Viewer({ modelUrl, fileMap }) {
                 setScale(1);
                 setShowGrid(true);
                 setShowTransform(true);
+                setShowGizmo(true);
                 setAmbientIntensity(0.5);
                 setDirectionalIntensity(1);
                 setBgColor('#1a1a1a');
