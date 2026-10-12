@@ -1,3 +1,27 @@
+# Dependencies
+node_modules
+/.pnp
+.pnp.js
+
+# Production & Build outputs
+dist
+dist-ssr
+.vite
+*.local
+
+# Testing & Coverage (Vitest & Playwright)
+coverage
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+*.env.local
+
 # Logs
 logs
 *.log
@@ -7,18 +31,20 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
+# Editor & Tooling
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
+.eslintcache
+*.tsbuildinfo
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# OS Files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini

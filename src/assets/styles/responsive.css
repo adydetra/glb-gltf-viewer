@@ -1,0 +1,117 @@
+@media (max-width: 640px) {
+  .header {
+    padding: 1rem 1.25rem;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .header h1 {
+    font-size: 1.125rem;
+  }
+
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+    width: 100%;
+  }
+
+  .upload-btn,
+  .reset-btn {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    line-height: 1.2;
+    justify-content: center;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    touch-action: manipulation;
+  }
+
+  .controls-divider {
+    display: none;
+  }
+
+  label[for='glb-upload'].upload-btn {
+    grid-column: 1 / -1;
+  }
+
+  label[for='gltf-upload'].upload-btn {
+    grid-column: auto;
+  }
+
+  label[for='zip-upload'].upload-btn {
+    grid-column: auto;
+  }
+
+  .controls .reset-btn {
+    grid-column: 1 / -1;
+  }
+
+  .placeholder {
+    font-size: 1.125rem;
+    padding: 2rem 1.5rem;
+    margin: 1.5rem;
+    gap: 1rem;
+  }
+
+  .placeholder p {
+    font-size: 1.125rem;
+  }
+
+  .placeholder span {
+    font-size: 0.9375rem;
+  }
+
+  .upload-icon {
+    width: 64px !important;
+    height: 64px !important;
+  }
+
+  .drop-overlay p {
+    font-size: 1rem;
+    padding: 1.5rem 2rem;
+  }
+
+  .controls-toggle {
+    bottom: 1.5rem;
+    right: 1.5rem;
+    width: 44px;
+    height: 44px;
+  }
+
+  .config-panel {
+    bottom: 5rem;
+    right: 1.5rem;
+    left: 1.5rem;
+    width: auto;
+    padding: 1.5rem;
+  }
+
+  .color-preview {
+    width: 48px;
+    height: 48px;
+  }
+
+  .floating-controls {
+    bottom: 1.5rem;
+    right: 1.5rem;
+    gap: 0.5rem;
+  }
+
+  .controls-toggle,
+  .screenshot-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .screenshot-toast {
+    bottom: 1.5rem;
+    left: 1.5rem;
+    max-width: calc(100vw - 3rem);
+  }
+}

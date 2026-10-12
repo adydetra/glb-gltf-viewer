@@ -1,35 +1,31 @@
-// App.jsx
-import { useState, useRef, useLayoutEffect, useEffect } from 'react';
+import { useState, useRef, useLayoutEffect, useTransition } from 'react';
 import Viewer from './components/Viewer';
 import './assets/styles/App.css';
 import JSZip from 'jszip';
 import gsap from 'gsap';
+
+const JAKARTA_YEAR = (() => {
+  const jakartaNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+  return jakartaNow.getFullYear();
+})();
 
 function App() {
   const [modelUrl, setModelUrl] = useState(null);
   const [fileName, setFileName] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [fileMap, setFileMap] = useState(null);
+  const [isPending, startTransition] = useTransition();
 
-  // Stabilizer untuk dragleave
   const dragCounter = useRef(0);
 
-  // GSAP refs
   const titleRef = useRef(null);
   const controlsRef = useRef(null);
   const placeholderRef = useRef(null);
 
-  // Tahun dinamis mengikuti waktu Asia/Jakarta
-  const jakartaYear = (() => {
-    const jakartaNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
-    return jakartaNow.getFullYear();
-  })();
-
-  // === Fade-in: title + container tombol (bersamaan) ===
   useLayoutEffect(() => {
     const targets = [titleRef.current, controlsRef.current].filter(Boolean);
     gsap.set(targets, { opacity: 0 });
-    gsap.to(targets, {
+    const tween = gsap.to(targets, {
       opacity: 1,
       duration: 0.6,
       ease: 'power1.out',
@@ -38,13 +34,15 @@ function App() {
         gsap.set(targets, { clearProps: 'opacity' });
       },
     });
+    return () => {
+      tween.kill();
+    };
   }, []);
 
-  // === Fade-in: UI drag area / placeholder box ===
   useLayoutEffect(() => {
     if (!modelUrl && placeholderRef.current) {
       gsap.set(placeholderRef.current, { opacity: 0 });
-      gsap.to(placeholderRef.current, {
+      const tween = gsap.to(placeholderRef.current, {
         opacity: 1,
         duration: 0.45,
         ease: 'power1.out',
@@ -52,6 +50,9 @@ function App() {
           gsap.set(placeholderRef.current, { clearProps: 'opacity' });
         },
       });
+      return () => {
+        tween.kill();
+      };
     }
   }, [modelUrl]);
 
@@ -59,7 +60,6 @@ function App() {
     if (map) for (const url of map.values()) URL.revokeObjectURL(url);
   };
 
-  // === Core loader: handle GLB single & GLTF folder ===
   const processFiles = (files, forceGLB = false) => {
     if (!files || files.length === 0) return;
 
@@ -69,7 +69,6 @@ function App() {
 
     const filesArr = Array.from(files);
 
-    // 1) Via tombol GLB, cari .glb duluan
     if (forceGLB) {
       const glbFile = filesArr.find((f) => f.name.toLowerCase().endsWith('.glb'));
       if (glbFile) {
@@ -80,7 +79,6 @@ function App() {
       }
     }
 
-    // 2) Jika ada .gltf → perlakukan sebagai GLTF folder
     const rootGLTF = filesArr.find((f) => f.name.toLowerCase().endsWith('.gltf'));
     if (rootGLTF) {
       const map = new Map();
@@ -99,7 +97,9 @@ function App() {
           map.set(decoded.toLowerCase(), url);
           map.set('./' + decoded, url);
           map.set('./' + decoded.toLowerCase(), url);
-        } catch {}
+        } catch {
+          void 0;
+        }
       }
 
       setFileMap(map);
@@ -110,7 +110,6 @@ function App() {
       return;
     }
 
-    // 3) Jika tidak ada .gltf, cek .glb (DnD single GLB)
     const glbFallback = filesArr.find((f) => f.name.toLowerCase().endsWith('.glb'));
     if (glbFallback) {
       const url = URL.createObjectURL(glbFallback);
@@ -122,7 +121,6 @@ function App() {
     console.warn('No .gltf or .glb found in dropped files.');
   };
 
-  // ===== ZIP → GLTF/GLB fallback (Firefox/Safari) =====
   const extToMime = (name) => {
     const ext = name.split('.').pop().toLowerCase();
     switch (ext) {
@@ -194,12 +192,25 @@ function App() {
     }
   };
 
-  // ===== input handlers =====
-  const handleGLBUpload = (e) => processFiles(e.target.files, true);
-  const handleGLTFUpload = (e) => processFiles(e.target.files, false);
+  const handleGLBUpload = (e) => {
+    startTransition(() => {
+      processFiles(e.target.files, true);
+    });
+  };
+
+  const handleGLTFUpload = (e) => {
+    startTransition(() => {
+      processFiles(e.target.files, false);
+    });
+  };
+
   const handleZipUpload = (e) => {
     const f = e.target.files?.[0];
-    if (f && /\.zip$/i.test(f.name)) processZip(f);
+    if (f && /\.zip$/i.test(f.name)) {
+      startTransition(async () => {
+        await processZip(f);
+      });
+    }
   };
 
   const handleReset = () => {
@@ -210,7 +221,6 @@ function App() {
     setFileMap(null);
   };
 
-  // ===== Drag & Drop (tanpa popup overlay) =====
   const handleDragEnter = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -228,53 +238,54 @@ function App() {
     dragCounter.current = Math.max(0, dragCounter.current - 1);
     if (dragCounter.current === 0) setIsDragging(false);
   };
-  const handleDrop = async (e) => {
+  const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
     dragCounter.current = 0;
     setIsDragging(false);
 
     const items = e.dataTransfer.items;
-    const files = [];
-    let zipHandled = false;
+    const fileList = e.dataTransfer.files;
 
-    if (items) {
-      for (let i = 0; i < items.length; i++) {
-        const it = items[i];
-        if (it.kind !== 'file') continue;
-        const file = it.getAsFile();
+    startTransition(async () => {
+      const files = [];
+      let zipHandled = false;
 
-        if (file && /\.zip$/i.test(file.name)) {
-          await processZip(file);
-          zipHandled = true;
-          continue;
-        }
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          const it = items[i];
+          if (it.kind !== 'file') continue;
+          const file = it.getAsFile();
 
-        // Folder traversal (Chromium/WebKit)
-        const entry = it.webkitGetAsEntry && it.webkitGetAsEntry();
-        if (entry && (entry.isDirectory || entry.isFile)) {
-          await traverseFileTree(entry, '', files);
-        } else if (file) {
-          files.push(file);
+          if (file && /\.zip$/i.test(file.name)) {
+            await processZip(file);
+            zipHandled = true;
+            continue;
+          }
+
+          const entry = it.webkitGetAsEntry && it.webkitGetAsEntry();
+          if (entry && (entry.isDirectory || entry.isFile)) {
+            await traverseFileTree(entry, '', files);
+          } else if (file) {
+            files.push(file);
+          }
         }
       }
-    }
 
-    if (zipHandled) return;
+      if (zipHandled) return;
 
-    if (files.length === 0) {
-      const fileList = e.dataTransfer.files;
-      if (fileList?.[0] && /\.zip$/i.test(fileList[0].name)) {
-        await processZip(fileList[0]);
-        return;
+      if (files.length === 0) {
+        if (fileList?.[0] && /\.zip$/i.test(fileList[0].name)) {
+          await processZip(fileList[0]);
+          return;
+        }
+        processFiles(fileList);
+      } else {
+        processFiles(files);
       }
-      processFiles(fileList);
-    } else {
-      processFiles(files);
-    }
+    });
   };
 
-  // Traversal untuk DnD folder (webkitGetAsEntry)
   const traverseFileTree = async (item, path, files) => {
     return new Promise((resolve) => {
       if (item.isFile) {
@@ -310,18 +321,22 @@ function App() {
   return (
     <div className="app-container" onDragEnter={handleDragEnter} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
       <header className="header">
-        <h1 ref={titleRef}>GLB/GLTF Viewer</h1>
+        <div className="header-brand">
+          <h1 ref={titleRef}>GLB/GLTF Viewer</h1>
+          {fileName && (
+            <span className="file-badge" title={fileName}>
+              {fileName}
+            </span>
+          )}
+        </div>
         <div className="controls" ref={controlsRef}>
-          {/* GLB */}
           <label htmlFor="glb-upload" className="upload-btn">
             Upload GLB
           </label>
           <input id="glb-upload" type="file" accept=".glb" onChange={handleGLBUpload} style={{ display: 'none' }} />
 
-          {/* Divider (desktop) */}
           <span className="controls-divider" role="separator" aria-orientation="vertical" />
 
-          {/* GLTF Folder */}
           <label htmlFor="gltf-upload" className="upload-btn" title="Chromium/WebKit only">
             Upload GLTF Folder
           </label>
@@ -336,7 +351,6 @@ function App() {
             style={{ display: 'none' }}
           />
 
-          {/* GLTF Zip (cross-browser) */}
           <label htmlFor="zip-upload" className="upload-btn">
             Upload GLTF (.zip)
           </label>
@@ -349,6 +363,13 @@ function App() {
           )}
         </div>
       </header>
+
+      {isPending && (
+        <div className="processing-banner">
+          <span className="processing-spinner" />
+          <span>Processing 3D assets...</span>
+        </div>
+      )}
 
       {modelUrl ? (
         <Viewer modelUrl={modelUrl} fileMap={fileMap} />
@@ -370,7 +391,7 @@ function App() {
 
           <div style={{ marginTop: '16px', fontSize: '11px', color: 'rgba(255,255,255,0.55)' }}>
             <span>
-              Copyright &copy; {jakartaYear} —{' '}
+              Copyright &copy; {JAKARTA_YEAR} —{' '}
               <a href="https://github.com/adydetra" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
                 adydetra
               </a>
